@@ -1,0 +1,148 @@
+# MongoDB Sharded Cluster — 2-tahap init
+#
+# Topologi (port host — port 27017 dipakai mongod lokal Windows):
+#   - 1 mongos router          -> localhost:37017  (MONGODB_URI app)
+#   - 1 config server replset  -> localhost:37019  (configReplSet)
+#   - shard1                   -> localhost:37018  (shard1ReplSet)
+#   - shard2                   -> localhost:37020  (shard2ReplSet)
+#
+# Urutan startup:
+#   1. configsvr, shard1, shard2 naik (healthcheck ping)
+#   2. mongo-init-rs: inisialisasi replica set ketiga node → exit 0
+#   3. mongo-router naik (mongos), terhubung ke configReplSet yg sudah punya PRIMARY
+#   4. mongo-init-shard: addShard + enableSharding + shardCollection → exit 0
+#
+# Jalankan  : docker compose up -d
+# Verifikasi: docker exec -it mongo-router mongosh --eval "sh.status()"
+
+services:
+  # ---------------------------------------------------------------------------
+  # Config Server
+  # ---------------------------------------------------------------------------
+  mongo-configsvr:
+    image: mongo:7.0
+    container_name: mongo-configsvr
+    command: >
+      mongod --configsvr --replSet configReplSet
+             --port 27017 --bind_ip_all
+    ports:
+      - "37019:27017"
+    volumes:
+      - configsvr_data:/data/db
+    networks:
+      - mongo-cluster
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ---------------------------------------------------------------------------
+  # Shard 1
+  # ---------------------------------------------------------------------------
+  mongo-shard1:
+    image: mongo:7.0
+    container_name: mongo-shard1
+    command: >
+      mongod --shardsvr --replSet shard1ReplSet
+             --port 27017 --bind_ip_all
+    ports:
+      - "37018:27017"
+    volumes:
+      - shard1_data:/data/db
+    networks:
+      - mongo-cluster
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ---------------------------------------------------------------------------
+  # Shard 2
+  # ---------------------------------------------------------------------------
+  mongo-shard2:
+    image: mongo:7.0
+    container_name: mongo-shard2
+    command: >
+      mongod --shardsvr --replSet shard2ReplSet
+             --port 27017 --bind_ip_all
+    ports:
+      - "37020:27017"
+    volumes:
+      - shard2_data:/data/db
+    networks:
+      - mongo-cluster
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ---------------------------------------------------------------------------
+  # TAHAP 1 — Inisialisasi replica set (sebelum mongos naik)
+  # ---------------------------------------------------------------------------
+  mongo-init-rs:
+    image: mongo:7.0
+    container_name: mongo-init-rs
+    depends_on:
+      mongo-configsvr:
+        condition: service_healthy
+      mongo-shard1:
+        condition: service_healthy
+      mongo-shard2:
+        condition: service_healthy
+    volumes:
+      - ./init-rs.sh:/scripts/init-rs.sh:ro
+    entrypoint: ["bash", "/scripts/init-rs.sh"]
+    networks:
+      - mongo-cluster
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # Mongos Router — naik SETELAH replica set terinisialisasi
+  # ---------------------------------------------------------------------------
+  mongo-router:
+    image: mongo:7.0
+    container_name: mongo-router
+    command: >
+      mongos --configdb configReplSet/mongo-configsvr:27017
+             --port 27017 --bind_ip_all
+    ports:
+      - "37017:27017"
+    depends_on:
+      mongo-init-rs:
+        condition: service_completed_successfully
+    networks:
+      - mongo-cluster
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ---------------------------------------------------------------------------
+  # TAHAP 2 — Daftarkan shard & shard collection (setelah mongos healthy)
+  # ---------------------------------------------------------------------------
+  mongo-init-shard:
+    image: mongo:7.0
+    container_name: mongo-init-shard
+    depends_on:
+      mongo-router:
+        condition: service_healthy
+    volumes:
+      - ./init-sharding.sh:/scripts/init-sharding.sh:ro
+      - ./init-mongo-sharding.js:/scripts/init-mongo-sharding.js:ro
+    entrypoint: ["bash", "/scripts/init-sharding.sh"]
+    networks:
+      - mongo-cluster
+    restart: "no"
+
+networks:
+  mongo-cluster:
+    driver: bridge
+
+volumes:
+  configsvr_data:
+  shard1_data:
+  shard2_data:

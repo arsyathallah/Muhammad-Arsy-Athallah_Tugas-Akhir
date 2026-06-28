@@ -1,0 +1,94 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data files
+data/raw/
+data/processed/
+*.pkl
+*.h5
+*.npy
+
+# Models
+models/als/*/
+models/ncf/*/
+!models/**/.gitkeep
+
+# Logs
+logs/*.log
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Cassandra
+data/cassandra/
+
+# Spark
+metastore_db/
+derby.log
+spark-warehouse/
+
+# Results (gambar di-exclude, CSV/JSON tetap di-push)
+results/figures/
+results/reports/*.png
+results/reports/*.jpg
+results/*.png
+results/*.jpg
+
+# Streamlit app data (file besar)
+streamlit_app/data/*.npy
+streamlit_app/data/*.pkl
+
+# Claude
+.claude/
+
+# Backup files
+*_backup.py

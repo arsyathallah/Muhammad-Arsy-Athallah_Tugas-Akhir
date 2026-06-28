@@ -1,0 +1,128 @@
+{
+  "5": {
+    "NDCG@5": 0.0037,
+    "Precision@5": 0.0015,
+    "Recall@5": 0.0065,
+    "HitRate@5": 0.0073,
+    "users_evaluated": 272382
+  },
+  "10": {
+    "NDCG@10": 0.0053,
+    "Precision@10": 0.0013,
+    "Recall@10": 0.0114,
+    "HitRate@10": 0.0128,
+    "users_evaluated": 272382
+  },
+  "20": {
+    "NDCG@20": 0.0072,
+    "Precision@20": 0.0011,
+    "Recall@20": 0.0188,
+    "HitRate@20": 0.0212,
+    "users_evaluated": 272382
+  },
+  "RMSE": 1.6225,
+  "MAE": 1.1515,
+  "model": "GRAM-CF (PLM frozen, Phase 1)",
+  "training_history": [
+    {
+      "phase": 1,
+      "epoch": 1,
+      "loss": 0.5863
+    },
+    {
+      "phase": 1,
+      "epoch": 2,
+      "loss": 0.2817
+    },
+    {
+      "phase": 1,
+      "epoch": 3,
+      "loss": 0.1716
+    },
+    {
+      "phase": 1,
+      "epoch": 4,
+      "loss": 0.158
+    },
+    {
+      "phase": 1,
+      "epoch": 5,
+      "loss": 0.15
+    },
+    {
+      "phase": 1,
+      "epoch": 6,
+      "loss": 0.1426
+    },
+    {
+      "phase": 1,
+      "epoch": 7,
+      "loss": 0.1393
+    },
+    {
+      "phase": 1,
+      "epoch": 8,
+      "loss": 0.1373
+    },
+    {
+      "phase": 1,
+      "epoch": 9,
+      "loss": 0.1357
+    },
+    {
+      "phase": 1,
+      "epoch": 10,
+      "loss": 0.1349
+    },
+    {
+      "phase": 1,
+      "epoch": 11,
+      "loss": 0.1342
+    },
+    {
+      "phase": 1,
+      "epoch": 12,
+      "loss": 0.1324
+    },
+    {
+      "phase": 1,
+      "epoch": 13,
+      "loss": 0.1309
+    },
+    {
+      "phase": 1,
+      "epoch": 14,
+      "loss": 0.1312
+    },
+    {
+      "phase": 1,
+      "epoch": 15,
+      "loss": 0.1302
+    },
+    {
+      "phase": 1,
+      "epoch": 16,
+      "loss": 0.1301
+    },
+    {
+      "phase": 1,
+      "epoch": 17,
+      "loss": 0.1287
+    },
+    {
+      "phase": 1,
+      "epoch": 18,
+      "loss": 0.1269
+    },
+    {
+      "phase": 1,
+      "epoch": 19,
+      "loss": 0.1283
+    },
+    {
+      "phase": 1,
+      "epoch": 20,
+      "loss": 0.1269
+    }
+  ]
+}

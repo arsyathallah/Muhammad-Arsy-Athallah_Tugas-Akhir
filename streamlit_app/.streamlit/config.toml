@@ -1,0 +1,14 @@
+[theme]
+base            = "light"
+primaryColor    = "#b81120"        # Suggestify red — aksi utama
+backgroundColor = "#f7f9fd"        # surface terang
+secondaryBackgroundColor = "#f2f4f8"  # sidebar / container
+textColor       = "#191c1f"        # charcoal — legibilitas maksimal
+font            = "sans serif"
+
+[server]
+headless        = true
+enableCORS      = false
+
+[browser]
+gatherUsageStats = false
