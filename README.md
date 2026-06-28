@@ -87,7 +87,7 @@ recommendation-system/
 ### 1. Clone & Setup
 
 ```bash
-git clone https://github.com/arsyathallah/Source-Code-Tugas-Akhir.git
+git clone https://github.com/arsyathallah/Muhammad-Arsy-Athallah_Tugas-Akhir.git
 cd Source-Code-Tugas-Akhir
 
 python -m venv venv
