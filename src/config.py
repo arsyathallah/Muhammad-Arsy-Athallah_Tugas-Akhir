@@ -29,7 +29,7 @@ RATINGS_PARQUET = PROCESSED_DATA_DIR / "ratings.parquet"
 TRAIN_PARQUET = PROCESSED_DATA_DIR / "train.parquet"
 TEST_PARQUET = PROCESSED_DATA_DIR / "test.parquet"
 
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://10.4.89.233:27017")
 MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "recommendation_system")
 MONGODB_CONNECT_TIMEOUT_MS = int(os.getenv("MONGODB_CONNECT_TIMEOUT_MS", "15000"))
 MONGODB_SERVER_SELECTION_TIMEOUT_MS = int(
@@ -39,7 +39,7 @@ MONGODB_SERVER_SELECTION_TIMEOUT_MS = int(
 MONGODB_CLUSTER_NAME = os.getenv("MONGODB_CLUSTER_NAME", "recommendation_mongodb_cluster")
 MONGODB_NODES = os.getenv(
     "MONGODB_NODES",
-    "localhost:27017,localhost:27018,localhost:27020",
+    "10.4.89.233:27017",
 ).split(",")
 
 MONGODB_COLLECTIONS = {

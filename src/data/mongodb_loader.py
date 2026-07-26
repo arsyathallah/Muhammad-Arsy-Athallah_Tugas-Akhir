@@ -48,7 +48,6 @@ class MongoDBLoader:
         self.db = self.client[self.database_name]
         logger.info(f" Terhubung ke MongoDB: {self.uri} (db={self.database_name})")
 
-    # ------------------------------------------------------------------ utils
     def is_sharded_cluster(self) -> bool:
         """True bila terhubung ke mongos (cluster sharded), bukan mongod tunggal."""
         try:
@@ -72,7 +71,6 @@ class MongoDBLoader:
                 logger.warning(f"   Sebagian batch gagal pada '{collection_name}': {e.details}")
         return total
 
-    # ------------------------------------------------------------------ loaders
     def load_reviews(self, df: pd.DataFrame) -> int:
         """Muat dokumen review lengkap. Sharded by hashed user_id."""
         coll = MONGODB_COLLECTIONS["reviews"]
@@ -167,7 +165,6 @@ class MongoDBLoader:
         logger.info(f"   users: {n} dokumen dimuat")
         return n
 
-    # ------------------------------------------------------------------ report
     def get_shard_distribution(self) -> dict:
         """Distribusi chunk per shard untuk tiap collection yang di-shard.
 
@@ -195,7 +192,6 @@ class MongoDBLoader:
             result["error"] = str(e)
         return result
 
-    # ------------------------------------------------------------------ pipeline
     def run_full_load(self, clean_df: pd.DataFrame) -> dict:
         """Muat seluruh data hasil preprocessing ke cluster."""
         if clean_df is None or len(clean_df) == 0:

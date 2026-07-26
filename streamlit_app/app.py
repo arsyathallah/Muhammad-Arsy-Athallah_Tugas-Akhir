@@ -87,7 +87,6 @@ st.set_page_config(page_title="Suggestify · Recommendation Engine",
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -98,14 +97,6 @@ html, body, .stApp {
 }
 #MainMenu, footer, header { visibility: hidden; }
 .block-container { max-width: 1200px !important; padding: 1.5rem 2rem 5rem !important; }
-
-.material-symbols-outlined {
-    font-family: 'Material Symbols Outlined';
-    font-weight: normal; font-style: normal;
-    line-height: 1; letter-spacing: normal; text-transform: none;
-    display: inline-block; white-space: nowrap; word-wrap: normal;
-    direction: ltr; vertical-align: middle;
-}
 
 /* ── Sidebar ── */
 section[data-testid="stSidebar"] {
@@ -251,7 +242,7 @@ def render_sidebar(step: int):
         </div>
         """, unsafe_allow_html=True)
 
-        if st.button("＋  New Analysis", type="primary",
+        if st.button("New Analysis", type="primary",
                      use_container_width=True, key="new_analysis"):
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
@@ -265,22 +256,19 @@ def render_sidebar(step: int):
         for i, (icon, label) in enumerate(NAV_ITEMS):
             if i == step:
                 items_html += (
-                    f'<div style="display:flex;align-items:center;gap:.7rem;padding:.55rem .7rem;'
+                    f'<div style="display:flex;align-items:center;padding:.55rem .7rem;'
                     f'border-radius:5px;background:{PRIMARY};color:#fff;font-weight:700;'
                     f'border-left:4px solid #7a0a14;margin-bottom:.2rem;">'
-                    f'<span class="material-symbols-outlined" style="font-size:20px;">{icon}</span>'
                     f'<span style="font-size:.86rem;">{label}</span></div>')
             elif i < step:
                 items_html += (
-                    f'<div style="display:flex;align-items:center;gap:.7rem;padding:.55rem .7rem;'
+                    f'<div style="display:flex;align-items:center;padding:.55rem .7rem;'
                     f'border-radius:5px;color:{TEXT};border-left:4px solid transparent;margin-bottom:.2rem;">'
-                    f'<span class="material-symbols-outlined" style="font-size:20px;color:{GREEN};">check_circle</span>'
                     f'<span style="font-size:.86rem;font-weight:500;">{label}</span></div>')
             else:
                 items_html += (
-                    f'<div style="display:flex;align-items:center;gap:.7rem;padding:.55rem .7rem;'
+                    f'<div style="display:flex;align-items:center;padding:.55rem .7rem;'
                     f'border-radius:5px;color:{FAINT};border-left:4px solid transparent;margin-bottom:.2rem;">'
-                    f'<span class="material-symbols-outlined" style="font-size:20px;">{icon}</span>'
                     f'<span style="font-size:.86rem;font-weight:400;">{label}</span></div>')
         st.markdown(items_html, unsafe_allow_html=True)
 
@@ -364,12 +352,13 @@ def save_result():
 
 def db_expander():
     mongo_ok = _mongo_ok()
-    _, total_items, total_uat = _get_db_stats()
+    shard_info, total_items, total_uat = _get_db_stats()
     status_c = GREEN if mongo_ok else PRIMARY
     status_t = "CONNECTED" if mongo_ok else "DISCONNECTED"
+    shards   = shard_info.get("shards", [])
 
-    def node(dot_ok, role, name, host, role_c):
-        dc = GREEN if dot_ok else PRIMARY
+    def node(role, name, host, role_c):
+        dc = GREEN if mongo_ok else PRIMARY
         return (f'<div style="display:flex;align-items:center;gap:.5rem;padding:.45rem .7rem;'
                 f'background:{INNER};border:1px solid {BORDER};border-radius:6px;margin-bottom:.3rem;">'
                 f'<div style="width:7px;height:7px;border-radius:50%;background:{dc};flex-shrink:0;"></div>'
@@ -379,9 +368,11 @@ def db_expander():
                 f'<span style="font-size:.68rem;color:{FAINT};font-family:monospace;margin-left:auto;">{host}</span>'
                 f'</div>')
 
-    n1 = node(mongo_ok, "PRIMARY",   "rs0-0", "localhost:27017", PRIMARY)
-    n2 = node(mongo_ok, "SECONDARY", "rs0-1", "localhost:27018", SECONDARY)
-    n3 = node(mongo_ok, "SECONDARY", "rs0-2", "localhost:27019", SECONDARY)
+    nodes_html = node("ROUTER", "mongos", db.MONGO_URI.split("@")[-1].split("/")[0], PRIMARY)
+    for s in shards:
+        nodes_html += node("SHARD", s.get("id", "?"), s.get("host", "?"), SECONDARY)
+    if not shards:
+        nodes_html += f'<div style="font-size:.72rem;color:{FAINT};padding:.3rem .7rem;">Info shard tidak tersedia.</div>'
 
     stat = lambda v, l: (f'<div style="background:{INNER};border:1px solid {BORDER};border-radius:7px;padding:.6rem;text-align:center;">'
                           f'<div style="font-size:1.1rem;font-weight:800;color:{TEXT};">{v}</div>'
@@ -389,17 +380,17 @@ def db_expander():
 
     html = (
         f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;">'
-        f'<span style="font-size:.82rem;font-weight:700;color:{TEXT};">MongoDB Replica Set (rs0)</span>'
+        f'<span style="font-size:.82rem;font-weight:700;color:{TEXT};">MongoDB Sharded Cluster</span>'
         f'<span style="font-size:.7rem;font-weight:700;color:{status_c};">● {status_t}</span></div>'
-        f'{n1}{n2}{n3}'
+        f'{nodes_html}'
         f'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-top:.6rem;">'
-        f'{stat(f"{total_items:,}","Items")}{stat(total_uat,"UAT")}{stat(3,"Nodes")}</div>'
+        f'{stat(f"{total_items:,}","Items")}{stat(total_uat,"UAT")}{stat(len(shards),"Shards")}</div>'
         f'<div style="margin-top:.6rem;padding-top:.6rem;border-top:1px solid {BORDER};">'
-        f'<div style="font-size:.62rem;color:{MUTED};font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem;">High Availability</div>'
-        f'<div style="font-size:.72rem;color:{MUTED};line-height:1.5;">Automatic failover · data replicated across 3 nodes · Secondary terpilih sebagai Primary baru jika node utama gagal.</div>'
+        f'<div style="font-size:.62rem;color:{MUTED};font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem;">Data Distribution</div>'
+        f'<div style="font-size:.72rem;color:{MUTED};line-height:1.5;">Aplikasi terhubung melalui mongos router · data terpartisi (sharded) di seluruh shard yang terdaftar.</div>'
         f'</div>'
     )
-    with st.expander("  System Architecture (Advisor View)"):
+    with st.expander("System Architecture (Advisor View)"):
         st.markdown(html, unsafe_allow_html=True)
 
 phase = st.session_state.phase
@@ -415,48 +406,40 @@ if phase == "welcome":
         <div style="position:relative;max-width:640px;">
             <img src="data:image/png;base64,{_logo_b64()}"
                  style="width:64px;height:64px;object-fit:contain;margin-bottom:1rem;" alt="Suggestify"/>
-            <div style="display:inline-flex;align-items:center;gap:.4rem;font-size:.72rem;font-weight:600;
-                        color:#0040a2;background:#dae2ff;border:1px solid #b2c5ff;border-radius:5px;
-                        padding:.3rem .8rem;margin-bottom:1.25rem;">
-                <span class="material-symbols-outlined" style="font-size:16px;">bolt</span>
-                Research Study · User Acceptance Testing
-            </div>
             <h1 style="font-size:2.4rem;font-weight:800;color:{TEXT};letter-spacing:-.03em;
                        line-height:1.1;margin-bottom:.85rem;">Welcome to Suggestify</h1>
             <p style="font-size:1rem;color:{MUTED};line-height:1.65;">
                 Mesin rekomendasi berbasis data yang dirancang untuk presisi. Suggestify menganalisis
                 preferensi Anda menggunakan model algoritmik tingkat lanjut untuk menyajikan rekomendasi
-                game yang relevan — lalu Anda menilai seberapa baik hasilnya.
+                game yang relevan, lalu Anda menilai seberapa baik hasilnya.
             </p>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown(f'<h2 style="font-size:1.3rem;font-weight:700;color:{TEXT};margin-bottom:1.1rem;'
-                'display:flex;align-items:center;gap:.5rem;">'
-                f'<span class="material-symbols-outlined" style="color:{PRIMARY};">memory</span>'
+    st.markdown(f'<h2 style="font-size:1.3rem;font-weight:700;color:{TEXT};margin-bottom:1.1rem;">'
                 'Active Engine Models</h2>', unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns(3, gap="medium")
     models = [
-        (c1, "group", "#ffdad7", PRIMARY, "ALS-CF", "COLLABORATIVE FILTERING",
-         "Alternating Least Squares — matrix factorization pada implicit feedback untuk menemukan pola dari pengguna serupa."),
-        (c2, "description", "#dae2ff", SECONDARY, "PLM-CBF", "PRE-TRAINED LANGUAGE MODEL",
-         "Content-Based Filtering berbasis Sentence-BERT (all-MiniLM-L6-v2, 384-dim) untuk representasi semantik item."),
-        (c3, "hub", "#e2e1ee", "#5b5b65", "GRAM-CF", "PLM + BPR LOSS",
-         "PLM item encoder + learnable user embedding dioptimasi dengan Bayesian Personalized Ranking."),
+        ("01", "ALS-CF", "COLLABORATIVE FILTERING",
+         "Matrix factorization Alternating Least Squares pada implicit feedback untuk menemukan pola dari pengguna yang serupa."),
+        ("02", "PLM-CBF", "PRE-TRAINED LANGUAGE MODEL",
+         "Content-based filtering berbasis Sentence-BERT (all-MiniLM-L6-v2, 384-dim) untuk representasi semantik item."),
+        ("03", "GRAM-CF", "PLM + BPR LOSS",
+         "PLM item encoder dengan learnable user embedding, dioptimasi menggunakan Bayesian Personalized Ranking."),
     ]
-    for col, icon, ic_bg, ic_c, name, tag, desc in models:
+    for col, (num, name, tag, desc) in zip((c1, c2, c3), models):
         with col:
             st.markdown(f"""
             <div style="background:#ffffff;border:1px solid {BORDER};border-radius:8px;padding:1.4rem;height:100%;">
-                <div style="width:42px;height:42px;border-radius:7px;background:{ic_bg};
-                            display:flex;align-items:center;justify-content:center;margin-bottom:1rem;">
-                    <span class="material-symbols-outlined" style="color:{ic_c};">{icon}</span>
-                </div>
+                <div style="width:28px;height:28px;background:{PRIMARY}1a;border-radius:6px;
+                            display:flex;align-items:center;justify-content:center;
+                            font-size:.75rem;font-weight:800;color:{PRIMARY};margin-bottom:.9rem;">{num}</div>
                 <div style="font-size:1.05rem;font-weight:700;color:{TEXT};margin-bottom:.25rem;">{name}</div>
-                <div style="font-size:.66rem;font-weight:700;color:{ic_c};letter-spacing:.06em;margin-bottom:.6rem;">{tag}</div>
-                <div style="font-size:.84rem;color:{MUTED};line-height:1.55;">{desc}</div>
+                <div style="font-size:.66rem;font-weight:700;color:{MUTED};letter-spacing:.06em;
+                            text-transform:uppercase;margin-bottom:.6rem;">{tag}</div>
+                <div style="font-size:.84rem;color:{MUTED};line-height:1.55;min-height:3.9rem;">{desc}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -467,17 +450,17 @@ if phase == "welcome":
         st.markdown(f'<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;'
                     f'color:{SECONDARY};margin-bottom:1rem;">Application Workflow</div>', unsafe_allow_html=True)
         steps = [
-            ("1", PRIMARY,   "Rate games you know", "Beri rating bintang pada minimal 5 game yang pernah Anda mainkan."),
-            ("2", SECONDARY, "We find your matches", "Sistem menganalisis rating Anda dan menyajikan 10 rekomendasi."),
-            ("3", GREEN,     "Share your feedback", "Tandai hasil yang relevan, lalu isi survei kegunaan 10 pertanyaan."),
+            ("1", "Rate games you know", "Beri rating bintang pada minimal 5 game yang pernah Anda mainkan."),
+            ("2", "We find your matches", "Sistem menganalisis rating Anda dan menyajikan 10 rekomendasi."),
+            ("3", "Share your feedback", "Tandai hasil yang relevan, lalu isi survei kegunaan 10 pertanyaan."),
         ]
         steps_html = '<div style="display:flex;flex-direction:column;gap:.6rem;">'
-        for num, c, title, desc in steps:
+        for num, title, desc in steps:
             steps_html += (
                 f'<div style="display:flex;align-items:flex-start;gap:.85rem;padding:.85rem;'
                 f'background:#ffffff;border:1px solid {BORDER};border-radius:7px;">'
-                f'<div style="width:28px;height:28px;background:{c}1a;border-radius:6px;flex-shrink:0;'
-                f'display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:{c};">{num}</div>'
+                f'<div style="width:28px;height:28px;background:{PRIMARY}1a;border-radius:6px;flex-shrink:0;'
+                f'display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:{PRIMARY};">{num}</div>'
                 f'<div><div style="font-size:.88rem;font-weight:600;color:{TEXT};">{title}</div>'
                 f'<div style="font-size:.78rem;color:{MUTED};margin-top:2px;">{desc}</div></div></div>')
         steps_html += '</div>'
@@ -494,10 +477,9 @@ if phase == "welcome":
         """, unsafe_allow_html=True)
 
         name = st.text_input("Nama atau inisial",
-                             placeholder="mis. DataScientist01",
                              label_visibility="collapsed")
 
-        if st.button("Start →", type="primary",
+        if st.button("Start", type="primary",
                      disabled=not name.strip(), use_container_width=True):
             st.session_state.responder_name = name.strip()
             go("onboarding")
@@ -514,8 +496,6 @@ if phase == "welcome":
                  <div style="font-size:.64rem;color:{FAINT};text-transform:uppercase;letter-spacing:.06em;">Reviews</div></div>
             <div><div style="font-size:1.15rem;font-weight:800;color:{TEXT};">3</div>
                  <div style="font-size:.64rem;color:{FAINT};text-transform:uppercase;letter-spacing:.06em;">Models</div></div>
-            <div><div style="font-size:1.15rem;font-weight:800;color:{TEXT};">~10m</div>
-                 <div style="font-size:.64rem;color:{FAINT};text-transform:uppercase;letter-spacing:.06em;">Total time</div></div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -589,7 +569,7 @@ elif phase == "onboarding":
     st.divider()
     b1, b2, _ = st.columns([2, 3, 2])
     with b1:
-        if st.button("See my recommendations →", type="primary",
+        if st.button("See my recommendations", type="primary",
                      disabled=n_rated < MIN_RATINGS, use_container_width=True):
             go("generating")
     with b2:
@@ -601,11 +581,6 @@ elif phase == "generating":
     rec = load_recommender()
     st.markdown(f"""
     <div style="text-align:center;padding:5rem 0;">
-        <div style="width:60px;height:60px;background:{PRIMARY};border-radius:14px;
-                    display:flex;align-items:center;justify-content:center;
-                    font-size:1.75rem;margin:0 auto 1.1rem;color:#fff;
-                    box-shadow:0 6px 24px rgba(184,17,32,.3);">
-            <span class="material-symbols-outlined" style="font-size:30px;">auto_awesome</span></div>
         <div style="font-size:1.15rem;font-weight:700;color:{TEXT};margin-bottom:.4rem;">Finding your matches</div>
         <div style="font-size:.875rem;color:{MUTED};">Menganalisis rating Anda…</div>
     </div>""", unsafe_allow_html=True)
@@ -622,11 +597,11 @@ elif phase == "recommendations":
 
     page_header("Top 10 Recommendations",
                 "Berdasarkan rating dan riwayat interaksi Anda. Untuk setiap game, "
-                "tandai apakah sesuai dengan selera Anda — jawab semua 10 untuk lanjut.")
+                "tandai apakah sesuai dengan selera Anda, jawab semua 10 untuk lanjut.")
 
     if not recs:
         st.warning("No recommendations generated. Try rating more games.")
-        if st.button("← Go back"): go("onboarding")
+        if st.button("Go back"): go("onboarding")
     else:
         answered = len(feedback)
         total    = len(recs)
@@ -672,7 +647,7 @@ elif phase == "recommendations":
                         f'<div style="background:#e6e8ec;border-radius:99px;height:5px;overflow:hidden;margin-bottom:.6rem;">'
                         f'<div style="width:{pct}%;height:100%;background:{SECONDARY};border-radius:99px;"></div></div>'
                         f'<a href="{p_url}" target="_blank" style="font-size:.78rem;font-weight:600;color:{SECONDARY};'
-                        f'text-decoration:none;white-space:nowrap;">View Details →</a>',
+                        f'text-decoration:none;white-space:nowrap;">View Details</a>',
                         unsafe_allow_html=True)
                 with c3:
                     st.markdown(f'<div style="font-size:.75rem;color:{MUTED};margin-bottom:.4rem;">Is this relevant?</div>',
@@ -697,7 +672,7 @@ elif phase == "recommendations":
         st.divider()
         sb, _ = st.columns([2, 4])
         with sb:
-            if st.button("Lanjut ke Survei →", type="primary",
+            if st.button("Lanjut ke Survei", type="primary",
                          disabled=not done_all, use_container_width=True):
                 go("sus_survey")
         if not done_all:
@@ -782,7 +757,7 @@ elif phase == "sus_survey":
     st.markdown("<br>", unsafe_allow_html=True)
     _, btn_col = st.columns([3, 1])
     with btn_col:
-        if st.button("Submit Survey  ▷", type="primary",
+        if st.button("Submit Survey", type="primary",
                      disabled=not all_answered, use_container_width=True):
             save_result()
             go("user_score")
@@ -864,8 +839,7 @@ elif phase == "user_score":
                     padding:2rem;min-height:210px;">
             <div style="font-size:.62rem;font-weight:700;letter-spacing:.1em;
                         text-transform:uppercase;color:{MUTED};margin-bottom:1rem;">SESSION STATUS</div>
-            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem;">
-                <span class="material-symbols-outlined" style="color:{SECONDARY};font-size:22px;">check_circle</span>
+            <div style="display:flex;align-items:center;margin-bottom:.75rem;">
                 <span style="font-size:1.25rem;font-weight:800;color:{SECONDARY};">Complete</span>
             </div>
             <div style="font-size:.83rem;color:{MUTED};line-height:1.6;margin-bottom:1.25rem;">
@@ -878,7 +852,7 @@ elif phase == "user_score":
                 {st.session_state.session_id}</div>
         </div>""", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("↩  Restart Session", use_container_width=True):
+        if st.button("Restart Session", use_container_width=True):
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
             st.rerun()
@@ -895,10 +869,7 @@ elif phase == "user_score":
         return (
             f'<div style="background:#ffffff;border:1px solid {BORDER};border-radius:10px;'
             f'padding:1.4rem;height:100%;">'
-            f'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem;">'
-            f'<div style="width:40px;height:40px;background:{bc}18;border-radius:8px;'
-            f'display:flex;align-items:center;justify-content:center;">'
-            f'<span class="material-symbols-outlined" style="color:{bc};font-size:20px;">{icon}</span></div>'
+            f'<div style="display:flex;align-items:flex-start;justify-content:flex-end;margin-bottom:1rem;">'
             f'<span style="font-size:.7rem;font-weight:700;color:{bc};">{badge}</span></div>'
             f'<div style="font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;'
             f'color:{MUTED};margin-bottom:.35rem;">{label}</div>'

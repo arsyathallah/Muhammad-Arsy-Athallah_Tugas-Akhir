@@ -47,8 +47,9 @@ n_items = len(item_enc.classes_)
 print(f"Total unique users : {n_users:,}")
 print(f"Total unique items : {n_items:,}")
 
-alpha = 40
-confidence = 1.0 + alpha * (train_df['rating'] - 1) / 4.0
+# Konversi rating eksplisit (1-5) menjadi bobot kepercayaan (confidence)
+# via normalisasi linear: rating 1 -> 0.1, rating 3 -> 0.55, rating 5 -> 1.0
+confidence = 0.1 + 0.9 * (train_df['rating'] - 1) / 4.0
 
 item_user_matrix = csr_matrix(
     (confidence.values, (train_df['item_idx'].values, train_df['user_idx'].values)),

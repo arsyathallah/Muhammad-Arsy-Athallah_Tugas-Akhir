@@ -1,19 +1,24 @@
 """
 Migrasi data dari MongoDB lokal (mongod, port 27017) ke MongoDB Sharded Cluster
-(mongos Docker, port 37017).
+(mongos di 10.4.89.233:27017).
 
-Jalankan setelah cluster Docker aktif:
-  cd docker && docker compose up -d
+Jalankan setelah cluster sharded aktif & dapat diakses:
   python scripts/migrate_to_sharded_cluster.py
 """
 
+import os
 import sys
 import time
+from dotenv import load_dotenv
 from pymongo import MongoClient, InsertOne
 from pymongo.errors import BulkWriteError
 
-SRC_URI = "mongodb://localhost:27017"
-DST_URI = "mongodb://localhost:37017"
+load_dotenv()
+
+SRC_URI = os.getenv("MIGRATE_SRC_URI", "mongodb://localhost:27017")
+# Tujuan = cluster sharded ber-auth; baca dari MONGODB_URI (.env) agar kredensial
+# tidak ter-hardcode di file yang masuk git.
+DST_URI = os.getenv("MONGODB_URI", "mongodb://10.4.89.233:27017")
 DB_NAME  = "recommendation_system"
 
 BATCH = 2000
@@ -52,8 +57,9 @@ def migrate_collection(src_db, dst_db, name: str):
 
     print(f"  {name}: memindahkan {total:,} docs ...")
 
-    # Drop data lama di tujuan agar tidak duplikat
-    dst_col.drop()
+    # Kosongkan isi lama agar tidak duplikat — JANGAN drop(), karena drop
+    # menghapus konfigurasi sharding sehingga collection jadi tidak terdistribusi.
+    dst_col.delete_many({})
 
     ops = []
     moved = 0
@@ -92,18 +98,27 @@ def verify_sharding(dst_client: MongoClient):
         for s in shards:
             print(f"    - {s['_id']}  =>  {s['host']}")
 
-        # Distribusi chunk per collection
-        config = dst_client["config"]
-        print("\n  Distribusi chunk per collection:")
-        for coll in ["reviews", "ratings", "recommendations", "product_profiles", "user_profiles"]:
-            ns = f"{DB_NAME}.{coll}"
-            dist = list(config["chunks"].aggregate([
-                {"$match": {"ns": ns}},
-                {"$group": {"_id": "$shard", "chunks": {"$sum": 1}}},
-            ]))
-            if dist:
-                info = ", ".join(f"{d['_id']}:{d['chunks']}" for d in dist)
-                print(f"    {coll}: {info}")
+        # Distribusi dokumen per shard (MongoDB 6.0+: $shardedDataDistribution).
+        # config.chunks tidak lagi punya field 'ns' sejak MongoDB 5.0, jadi
+        # query lama berbasis 'ns' tidak akan menghasilkan apa pun di 8.0.
+        wanted = {f"{DB_NAME}.{c}" for c in (
+            "reviews", "ratings", "recommendations", "product_profiles", "user_profiles"
+        )}
+        print("\n  Distribusi dokumen per shard:")
+        found = False
+        for d in dst_client.admin.aggregate([{"$shardedDataDistribution": {}}]):
+            if d["ns"] not in wanted:
+                continue
+            found = True
+            coll = d["ns"].split(".", 1)[1]
+            parts = ", ".join(
+                f"{s['shardName']}:{s.get('numOwnedDocuments', 0):,}"
+                for s in d.get("shards", [])
+            )
+            print(f"    {coll}: {parts}")
+        if not found:
+            print("    (belum ada collection sharded yang berisi data — "
+                  "balancer mungkin masih mendistribusikan)")
     except Exception as e:
         print(f"  Tidak bisa verifikasi sharding: {e}")
 
@@ -121,12 +136,12 @@ def main():
         print("  Pastikan mongod lokal berjalan di port 27017.")
         sys.exit(1)
 
-    print("\n[2] Koneksi ke tujuan (mongos Docker) ...")
+    print("\n[2] Koneksi ke tujuan (mongos sharded cluster) ...")
     try:
         dst = connect(DST_URI, "DST")
     except Exception as e:
         print(f"  ERROR: {e}")
-        print("  Pastikan Docker cluster sudah jalan: cd docker && docker compose up -d")
+        print(f"  Pastikan mongos {DST_URI} aktif dan dapat diakses dari jaringan Anda.")
         sys.exit(1)
 
     src_db = src[DB_NAME]
@@ -148,7 +163,7 @@ def main():
     dst.close()
 
     print("\nMigrasi selesai!")
-    print("Koneksi aplikasi → MONGODB_URI=mongodb://localhost:37017")
+    print("Koneksi aplikasi → MONGODB_URI=mongodb://10.4.89.233:27017")
 
 
 if __name__ == "__main__":

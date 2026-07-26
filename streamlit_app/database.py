@@ -1,11 +1,15 @@
 
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
+from dotenv import load_dotenv
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 DB_NAME          = "gamerecsys"

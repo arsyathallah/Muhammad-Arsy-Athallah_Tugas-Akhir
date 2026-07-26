@@ -14,14 +14,12 @@ import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
 BASE    = Path(__file__).resolve().parent
 DATA    = BASE / "data" / "processed"
 RESULTS = BASE / "results"
 FIGURES = RESULTS / "figures"
 FIGURES.mkdir(parents=True, exist_ok=True)
 
-# ── Style ─────────────────────────────────────────────────────────────────────
 plt.rcParams.update({
     "font.family":       "DejaVu Sans",
     "font.size":         11,
@@ -34,9 +32,6 @@ plt.rcParams.update({
 C = ["#2196F3", "#4CAF50", "#FF9800", "#E91E63", "#9C27B0"]
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Gambar 4.1 & 4.2 — dataset_overview.png
-# ══════════════════════════════════════════════════════════════════════════════
 def fig_dataset_overview():
     print("\n[1/4] Generating dataset_overview.png ...")
     df = pd.read_parquet(DATA / "train.parquet",
@@ -83,16 +78,12 @@ def fig_dataset_overview():
     print(f"  ✓ Tersimpan: {out}")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Gambar 4.3, 4.4, 4.5 — sentiment_analysis.png
-# ══════════════════════════════════════════════════════════════════════════════
 def fig_sentiment_analysis():
     print("\n[2/4] Generating sentiment_analysis.png ...")
     df = pd.read_parquet(DATA / "train.parquet",
                          columns=["user_id", "product_id", "rating",
                                   "rating_normalized", "review_text"])
 
-    # ── VADER on sample ───────────────────────────────────────────────────────
     vader_ok = False
     labels = []
     try:
@@ -167,9 +158,6 @@ def fig_sentiment_analysis():
     print(f"  ✓ Tersimpan: {out}")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Training curve GRAM-CF
-# ══════════════════════════════════════════════════════════════════════════════
 def fig_gram_training_curve():
     print("\n[3/4] Generating gram_training_curve.png ...")
 
@@ -213,9 +201,6 @@ def fig_gram_training_curve():
     print(f"  ✓ Tersimpan: {out}")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Copy gambar perbandingan yang sudah ada
-# ══════════════════════════════════════════════════════════════════════════════
 def copy_comparison_figures():
     print("\n[4/4] Menyalin gambar perbandingan model ...")
     names = [
@@ -238,7 +223,6 @@ def copy_comparison_figures():
             print(f"  ⚠ Tidak ditemukan: {name}")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 if __name__ == "__main__":
     print("=" * 60)
     print("  Generate Figures — Tugas Akhir Bab IV")
